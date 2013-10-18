@@ -18,6 +18,8 @@ along with SDLbrot.  If not, see <http://www.gnu.org/licenses/>.
 */
  
 #include "main.h"
+
+FILE *debug_file = NULL;
  
 /*
  * main
@@ -25,9 +27,11 @@ along with SDLbrot.  If not, see <http://www.gnu.org/licenses/>.
  */
 int main(int argc, char **argv)
 {
+    debug_file = fopen("debug.txt", "w");
+
     /* General variables */
     int return_val = 0;
-    cmp_num top_left = c_new(-2.0, 1.0), bottom_right = c_new(1.0, -1.0);
+    cmp_num top_left = c_new(-0.743650449, 0.1318314485), bottom_right = c_new(-0.743635821, 0.1318204775);
 
     /* Loop variables */
     int fps_counter = 0, ticks_passed = 0, closed = 0;
@@ -66,6 +70,8 @@ int main(int argc, char **argv)
         printf("Mandelbrot generation failed\n");
         exit(1);
     }
+    
+    fclose(debug_file);
 
     /* Event and render loop */
     while (!closed) {
@@ -150,6 +156,43 @@ cmp_num c_mult(cmp_num a, cmp_num b)
 }
 
 /*
+ * c_abs
+ * Returns absolute value of a complex number
+ */
+long double c_abs(cmp_num z)
+{
+    long double a = sqrtl((z.re * z.re) + (z.im * z.im));
+    return a;
+}
+
+/*
+ * mandelbrot_algorithm
+ * Returns colour for specified complex number
+ * according to results of Mandelbrot iterator
+ */
+Uint32 mandelbrot_algorithm(cmp_num coord, int iterations, double long limit, SDL_PixelFormat *format)
+{
+    cmp_num z = c_new(0, 0);
+    int i = 0, in_set = 1;
+    Uint32 pixel = 0;
+    
+    for (i = 0; i < iterations; i++) {
+        z = c_add(c_sqr(z), coord);
+        if (c_abs(z) > limit) {
+            in_set = 0;
+            break;
+        }
+    }
+    if (in_set) {
+        pixel = SDL_MapRGB(format, 0, 0, 0);
+    } else {
+        pixel = SDL_MapRGB(format, 255, 255, 255);
+    }
+
+    return pixel;
+}
+
+/*
  * compute_set
  * Returns Mandelbrot image of specified size,
  * for specified coordinates
@@ -158,10 +201,12 @@ SDL_Texture *compute_set(cmp_num top_left, cmp_num bottom_right, int img_w, int 
 {
     /* Variables */
     SDL_Surface *surface = NULL;
-    cmp_num coord[1];
+    cmp_num coord = top_left;
     int i = 0, j = 0;
     long double reDivisions = 0.0, imDivisions = 0.0;
-    Uint32 *pixel;
+    Uint32 *pixel, colour = 0;
+    int iterations = 1000;
+    long double limit = 2.0;
 
     /* Create surface */
     surface = SDL_CreateRGBSurface(0, img_w, img_h, 32, 0, 0, 0, 0);
@@ -182,19 +227,16 @@ SDL_Texture *compute_set(cmp_num top_left, cmp_num bottom_right, int img_w, int 
     reDivisions = (bottom_right.re - top_left.re) / (long double)img_w;
     imDivisions = (top_left.im - bottom_right.im) / (long double)img_h;
 
-    /* Generate coordinates for each pixel, and thus calculate colour */
+    /* Run algorithm on coordinate assigned to each pixel */
     for (i = 0; i < img_h; i++) {
+        coord.re = top_left.re;
         for (j = 0; j < surface->pitch; j += 4) {
-            coord->re = top_left.re + (reDivisions * j);
-            coord->im = top_left.im - (imDivisions * i);
-
             pixel = (Uint32 *)(surface->pixels + j + (i * surface->pitch));
-            if ((j/4)%7 == 0 && (i%7 == 0)) {
-                *pixel = SDL_MapRGB(surface->format, 0, 0, 255);
-            } else {
-                *pixel = SDL_MapRGB(surface->format, 255, 255, 0);
-            }
+            colour = mandelbrot_algorithm(coord, iterations, limit, surface->format);
+            *pixel = colour;
+            coord.re += reDivisions;
         }
+        coord.im -= imDivisions;
     }
 
     SDL_UnlockSurface(surface);
