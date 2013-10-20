@@ -35,7 +35,7 @@ cmp_num c_add(cmp_num a, cmp_num b);
 cmp_num c_sqr(cmp_num z);
 cmp_num c_mult(cmp_num a, cmp_num b);
 long double c_abs(cmp_num z);
-Uint32 mandelbrot_algorithm(cmp_num coord, int iterations, double long limit, SDL_PixelFormat *format);
-SDL_Texture *compute_set(cmp_num top_left, cmp_num bottom_right, int img_w, int img_h, SDL_Renderer *renderer);
+Uint32 mandelbrot_algorithm(cmp_num coord, int iterations, SDL_PixelFormat *format, Uint32 *palette);
+SDL_Texture *compute_set(cmp_num top_left, cmp_num bottom_right, int img_w, int img_h, SDL_Renderer *renderer, int iterations);
 
 #endif

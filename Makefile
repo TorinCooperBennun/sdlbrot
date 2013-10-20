@@ -1,15 +1,17 @@
 CC = gcc
 CFLAGS = -Wall -D__USE_MINGW_ANSI_STDIO -O3
-LIBS = -lSDL2main -lSDL2 -lm
-
-# Uncomment below if compiling using MinGW.
-# LIBS = -lmingw32 $(LIBS)
+LIBS =
+# Uncomment the line directly below if compiling using MinGW.
+LIBS += -lmingw32
+LIBS += -lSDL2main -lSDL2 -lm
 
 OBJS = main.o
+OUT = sdlbrot.exe
+# Add .exe to the line directly above if compiling using MinGW.
 
-all: sdlbrot
+all: $(OUT)
 
-sdlbrot: $(OBJS)
+$(OUT): $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LIBS)
 
 %.o: %.c
@@ -18,4 +20,4 @@ sdlbrot: $(OBJS)
 main.o: main.c main.h
 
 clean:
-	rm -f $(OBJS) sdlbrot
+	rm -f $(OBJS) $(OUT)
