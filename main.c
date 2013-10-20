@@ -20,6 +20,7 @@ along with SDLbrot.  If not, see <http://www.gnu.org/licenses/>.
 #include "main.h"
 
 FILE *debug_file = NULL;
+int *histogram;
  
 /*
  * main
@@ -46,6 +47,9 @@ int main(int argc, char **argv)
     /* SDL variables */
     SDL_Window *window = NULL;
     SDL_Renderer *renderer = NULL;
+
+    histogram = (int *)malloc(sizeof(int) * iterations);
+    memset(histogram, 0, iterations);
 
     /* Initialise SDL */
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -77,9 +81,14 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    for (closed = 0; closed < iterations; closed++) {
+        fprintf(debug_file, "%d,%d\n", closed, histogram[closed]);
+    }
+
     fclose(debug_file);
 
     /* Event and render loop */
+    closed = 0;
     while (!closed) {
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
@@ -183,22 +192,62 @@ Uint32 mandelbrot_algorithm(cmp_num coord, int iterations, SDL_PixelFormat *form
     int i = 0;
     Uint32 pixel = 0;
     
-    for (i = 0; (i < iterations); i++) {
+    for (i = 0; i < iterations; i++) {
         z = c_add(c_sqr(z), coord);
         if (c_abs(z) > 2.0) {
             break;
         }
     }
-
-    pixel = palette[i];
-
-    /*if (i < (iterations - 1)) {
-        pixel = SDL_MapRGB(format, 255, 255, 255);
-    } else {
-        pixel = SDL_MapRGB(format, 0, 0, 0);
-    }*/
-
+    histogram[i-1]++;
+    pixel = palette[i-1];
     return pixel;
+}
+
+/* generate_palette
+ * Generates a palette for each iteration number.
+ */
+Uint32 *generate_palette(int iterations, SDL_PixelFormat *format)
+{
+    float r, g, b;
+    Uint32 *palette;
+    int i, j;
+
+    palette = (Uint32 *)malloc(sizeof(Uint32) * iterations);
+
+    r = 1.0;
+    g = 0.0;
+    b = 0.0;
+    for (i = 0; i < (iterations / 4); i++) {
+        g = (1.0 / (float)(iterations / 4)) * (float)i;
+        palette[i] = SDL_MapRGB(format, 255, (Uint8)(g * 255.0), 0);
+    }
+
+    r = 1.0;
+    g = 1.0;
+    b = 0.0;
+    for (i = iterations / 4, j = 0; i < (iterations / 2); i++, j++) {
+        r = 1.0 - ((1.0 / (float)(iterations / 4)) * (float)i);
+        palette[i] = SDL_MapRGB(format, (Uint8)(r * 255.0), 255, 0);
+    }
+
+    r = 0.0;
+    g = 1.0;
+    b = 0.0;
+    for (i = iterations / 2, j = 0; i < ((iterations / 4) * 3); i++, j++) {
+        b = (1.0 / (float)(iterations / 4)) * (float)i;
+        palette[i] = SDL_MapRGB(format, 0, 255, (Uint8)(b * 255.0));
+    }
+
+    r = 0.0;
+    g = 1.0;
+    b = 1.0;
+    for (i = (iterations / 4) * 3, j = 0; i < iterations; i++, j++) {
+        g = 1.0 - ((1.0 / (float)(iterations / 4)) * (float)i);
+        b = g;
+        palette[i] = SDL_MapRGB(format, 0, (Uint8)(g * 255.0), (Uint8)(b * 255.0));
+    }
+
+    return palette;
 }
 
 /*
@@ -214,8 +263,6 @@ SDL_Texture *compute_set(cmp_num top_left, cmp_num bottom_right, int img_w, int 
     int i = 0, j = 0;
     long double reDivisions = 0.0, imDivisions = 0.0;
     Uint32 *pixel = NULL, colour = 0, *palette = NULL;
-    Uint8 component;
-    float component_colour;
 
     /* Create surface */
     surface = SDL_CreateRGBSurface(0, img_w, img_h, 32, 0, 0, 0, 0);
@@ -236,15 +283,8 @@ SDL_Texture *compute_set(cmp_num top_left, cmp_num bottom_right, int img_w, int 
     reDivisions = (bottom_right.re - top_left.re) / (long double)img_w;
     imDivisions = (top_left.im - bottom_right.im) / (long double)img_h;
 
-    /* Create palette */
-    palette = (Uint32 *)malloc(sizeof(Uint32) * (iterations + 1));
-    for (i = 0; i < iterations; i++) {
-        component_colour = (1.0 / (float)iterations) * (999 - i);
-        component = (Uint8)(255.0 * component_colour);
-        fprintf(debug_file, "%f, %d\n", component_colour, component);
-        palette[i] = SDL_MapRGB(surface->format, component, component, component);
-    }
-    palette[iterations] = SDL_MapRGB(surface->format, 0, 0, 0);
+	/* Generate palette */
+    palette = generate_palette(iterations, surface->format);
 
     /* Run algorithm on coordinate assigned to each pixel */
     for (i = 0; i < img_h; i++) {

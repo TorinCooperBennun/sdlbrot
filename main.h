@@ -23,6 +23,7 @@ along with SDLbrot.  If not, see <http://www.gnu.org/licenses/>.
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
  
 typedef struct {
@@ -35,6 +36,7 @@ cmp_num c_add(cmp_num a, cmp_num b);
 cmp_num c_sqr(cmp_num z);
 cmp_num c_mult(cmp_num a, cmp_num b);
 long double c_abs(cmp_num z);
+Uint32 *generate_palette(int iterations, SDL_PixelFormat *format);
 Uint32 mandelbrot_algorithm(cmp_num coord, int iterations, SDL_PixelFormat *format, Uint32 *palette);
 SDL_Texture *compute_set(cmp_num top_left, cmp_num bottom_right, int img_w, int img_h, SDL_Renderer *renderer, int iterations);
 
